@@ -1,37 +1,6 @@
-/**
- * ─────────────────────────────────────────────────────────────────────────────
- *  MRIDU — Advanced Hack Club Slack Bot
- *  Built with Slack Bolt (Socket Mode) · Node.js
- * ─────────────────────────────────────────────────────────────────────────────
- *
- *  Features:
- *    1.  Global error handling & all dependencies properly wired
- *    2.  Block Kit-enhanced /mridu-catfact and /mridu-joke
- *    3.  Interactive help dashboard  (/mridu-help)
- *    4.  Interactive poll engine     (/mridu-poll)
- *    5.  Hacker Pomodoro timer       (/mridu-pomodoro)
- *    6.  Slack Modal feedback form   (/mridu-feedback)
- *    7.  AI channel summarizer       (/mridu-tldr)
- *    8.  Code snapshot previewer     (/mridu-carbon)
- *    9.  Passive keyword triggers    (app.message)
- *   10.  Dynamic member welcome card (member_joined_channel)
- *
- *  Required .env keys:
- *    SLACK_BOT_TOKEN   — xoxb-…
- *    SLACK_APP_TOKEN   — xapp-…
- *
- *  Install deps:
- *    npm install @slack/bolt axios dotenv
- * ─────────────────────────────────────────────────────────────────────────────
- */
-
-// ── 1. DEPENDENCIES ──────────────────────────────────────────────────────────
-
 require("dotenv").config();
 const { App } = require("@slack/bolt");
 const axios = require("axios");
-
-// ── APP BOOTSTRAP ─────────────────────────────────────────────────────────────
 
 const app = new App({
     token: process.env.SLACK_BOT_TOKEN,
@@ -39,34 +8,19 @@ const app = new App({
     socketMode: true,
 });
 
-// ── GLOBAL UNCAUGHT ERROR SHIELD ──────────────────────────────────────────────
-// Prevents the process from dying on unhandled promise rejections.
-
 process.on("unhandledRejection", (reason) => {
     console.error("[unhandledRejection]", reason);
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  UTILITY HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Returns a divider Block Kit block — used between sections for visual rhythm.
- */
 const divider = () => ({ type: "divider" });
 
-/**
- * Returns a context block with small italic-style metadata text.
- * @param {string} text  Mrkdwn string
- */
+
 const contextBlock = (text) => ({
     type: "context",
     elements: [{ type: "mrkdwn", text }],
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  1.  /mridu-ping — Latency check
-// ─────────────────────────────────────────────────────────────────────────────
 
 app.command("/mridu-ping", async ({ command, ack, respond }) => {
     const start = Date.now();
@@ -86,9 +40,6 @@ app.command("/mridu-ping", async ({ command, ack, respond }) => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  3.  /mridu-help — Interactive Block Kit command dashboard
-// ─────────────────────────────────────────────────────────────────────────────
 
 app.command("/mridu-help", async ({ ack, respond }) => {
     await ack();
@@ -140,10 +91,6 @@ app.action("help_command_select", async ({ body, ack, respond }) => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  2a.  /mridu-catfact — Block Kit cat fact card
-// ─────────────────────────────────────────────────────────────────────────────
-
 app.command("/mridu-catfact", async ({ ack, respond }) => {
     await ack();
 
@@ -174,9 +121,6 @@ app.command("/mridu-catfact", async ({ ack, respond }) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  2b.  /mridu-joke — Block Kit joke card with setup / punchline reveal
-// ─────────────────────────────────────────────────────────────────────────────
 
 app.command("/mridu-joke", async ({ ack, respond }) => {
     await ack();
@@ -211,19 +155,6 @@ app.command("/mridu-joke", async ({ ack, respond }) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  4.  /mridu-poll — Interactive poll engine with live vote tracking
-//
-//  Usage:  /mridu-poll What is your favourite language? | Python | JS | Rust
-//          Pipe-delimited: first segment = question, rest = options (max 5)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * In-memory vote store.
- * Shape: { [pollId]: { question, options: [string], votes: { [optionIndex]: Set<userId> } } }
- *
- * Note: Resets on bot restart. For persistence, replace with a DB write.
- */
 const polls = {};
 
 app.command("/mridu-poll", async ({ command, ack, client, respond }) => {
@@ -283,11 +214,6 @@ app.command("/mridu-poll", async ({ command, ack, client, respond }) => {
     }
 });
 
-/**
- * Handles a vote button click.
- * Finds the poll, toggles the user's vote for the chosen option, then
- * updates the original message with fresh vote counts.
- */
 async function handlePollVote(optionIndex, { body, ack, client }) {
     await ack();
 
@@ -297,17 +223,14 @@ async function handlePollVote(optionIndex, { body, ack, client }) {
         const poll = polls[pollId];
 
         if (!poll) {
-            // Poll expired or bot restarted
             return;
         }
 
         const userId = body.user.id;
 
-        // Toggle vote (clicking the same option again removes the vote)
         if (poll.votes[optionIndex].has(userId)) {
             poll.votes[optionIndex].delete(userId);
         } else {
-            // Remove user's vote from any other option first (single-choice poll)
             for (const [idx, voters] of Object.entries(poll.votes)) {
                 if (Number(idx) !== optionIndex) voters.delete(userId);
             }
@@ -369,9 +292,6 @@ for (let i = 0; i < 5; i++) {
     app.action(`poll_vote_${i}`, (args) => handlePollVote(i, args));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  5.  /mridu-pomodoro — 25-minute Hacker focus timer with DM alert
-// ─────────────────────────────────────────────────────────────────────────────
 
 app.command("/mridu-pomodoro", async ({ command, ack, client, respond }) => {
     await ack();
@@ -394,9 +314,6 @@ app.command("/mridu-pomodoro", async ({ command, ack, client, respond }) => {
         ],
     });
 
-    // Non-blocking background timer — fires a DM when the sprint ends.
-    // Using setTimeout here is intentional: Socket Mode keeps the process alive,
-    // so this will fire reliably for short durations within a single session.
     setTimeout(async () => {
         try {
             // Open a DM channel with the user
@@ -427,9 +344,7 @@ app.command("/mridu-pomodoro", async ({ command, ack, client, respond }) => {
     }, DURATION_MS);
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  6.  /mridu-feedback — Modal pop-up feedback form
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 app.command("/mridu-feedback", async ({ command, ack, client }) => {
     await ack();
@@ -550,13 +465,6 @@ app.view("feedback_submit", async ({ ack, view, body, client }) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  7.  /mridu-tldr — AI-powered channel message summarizer
-//
-//  Fetches the last 20 messages in the current channel and formats them into
-//  a clean, bulleted recap. This is the structured placeholder implementation;
-//  plug in an OpenAI / Anthropic call to `summaryText` for AI-generated prose.
-// ─────────────────────────────────────────────────────────────────────────────
 
 app.command("/mridu-tldr", async ({ command, ack, client, respond }) => {
     await ack();
@@ -625,13 +533,6 @@ app.command("/mridu-tldr", async ({ command, ack, client, respond }) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  8.  /mridu-carbon — Code Snapshot Previewer
-//
-//  Usage:  /mridu-carbon lang=python\n<paste code here>
-//          The first line can optionally be `lang=<language>`.
-//          Everything else is treated as the code body.
-// ─────────────────────────────────────────────────────────────────────────────
 
 app.command("/mridu-carbon", async ({ command, ack, respond }) => {
     await ack();
@@ -690,13 +591,6 @@ app.command("/mridu-carbon", async ({ command, ack, respond }) => {
     });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  9.  PASSIVE KEYWORD TRIGGERS — Natural community debugging assistant
-//
-//  Listens for distress keywords anywhere in a message and replies with
-//  structured debugging tips. Only fires in public/private channels,
-//  not DMs, to avoid interrupting personal conversations.
-// ─────────────────────────────────────────────────────────────────────────────
 
 const DEBUGGING_TIPS = [
     "*Rubber Duck Debug* 🦆 — Explain your code line-by-line out loud (or in a thread here). The act of articulating often reveals the bug.",
@@ -737,12 +631,6 @@ app.message(HELP_REGEX, async ({ message, say }) => {
     }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  10.  MEMBER WELCOME DASHBOARD — member_joined_channel event
-//
-//  Fires whenever someone joins any channel Mridu is in.
-//  Sends a rich welcome card to the channel the member just joined.
-// ─────────────────────────────────────────────────────────────────────────────
 
 app.event("member_joined_channel", async ({ event, client }) => {
     try {
@@ -825,13 +713,8 @@ app.action("welcome_open_help", async ({ body, ack, client }) => {
     }
 });
 
-// This button uses a `url` field so no server-side action is needed,
-// but Bolt still requires an ack to avoid a Slack warning.
-app.action("welcome_hackclub_link", async ({ ack }) => { await ack(); });
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  START
-// ─────────────────────────────────────────────────────────────────────────────
+app.action("welcome_hackclub_link", async ({ ack }) => { await ack(); });
 
 (async () => {
     try {
