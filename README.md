@@ -43,3 +43,8 @@ app.command("/mridu-ping", async ({ command, ack, respond }) => {
   console.log("bot is running!");
 })();
 ```
+run node index.js and "bot is running!"
+then i saw my bot can ping now! hell yeah!
+
+then wrote some massive codes and now my mridu has 10 exclusive features.
+![Mridu](assets/readme/massive.png)
