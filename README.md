@@ -20,7 +20,7 @@ then i created a project on vs code, opened terminal and run some npm install co
 stored all the infos in the .env file.
 
 then created index.js and put this
-'''bash
+```index.js
 require("dotenv").config();
 
 const { App } = require("@slack/bolt");
@@ -42,4 +42,4 @@ app.command("/mridu-ping", async ({ command, ack, respond }) => {
   await app.start();
   console.log("bot is running!");
 })();
-'''
+```
