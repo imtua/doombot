@@ -1,13 +1,6 @@
 require("dotenv").config();
-const axios = require("axios");
+
 const { App } = require("@slack/bolt");
-const { btoa } = require("buffer");
-const { privateEncrypt } = require("crypto");
-const e = require("express");
-const { join } = require("path");
-const { normalize } = require("path/posix");
-const { checkServerIdentity } = require("tls");
-const { promiseHooks } = require("v8");
 
 const app = new App({
     token: process.env.SLACK_BOT_TOKEN,
@@ -19,15 +12,12 @@ app.command("/doom-ping", async ({ command, ack, respond }) => {
     const start = Date.now();
     await ack();
     const latency = Date.now() - start;
-    await respond({
-        response_type: "in_channel",
-        text: `Pong!\nLatency: ${latency}ms`
-    });
+    await respond({ text: `Doom is here.\nLatency: ${latency}ms` });
 });
 
 (async () => {
     await app.start();
-    console.log("Answer to doom.");
+    console.log("Answer to Doom!");
 })();
 
 app.command("/doom-help", async ({ ack, respond }) => {
@@ -86,13 +76,14 @@ app.command("/doom-remind", async ({ command, ack, respond }) => {
         response_type: "in_channel",
         text: `Doom will remind you in ${minutes} minutes: ${reminder}`
     });
+
     setTimeout(async () => {
         await respond({
             response_type: "in_channel",
             text: `Doom reminds you: ${reminder}`
-        }, minutes * 60 * 1000);
-    })
-})
+        });
+    }, minutes * 60 * 1000);
+});
 
 app.command("/doom-fact", async ({ ack, respond }) => {
     await ack();
